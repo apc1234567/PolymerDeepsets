@@ -1,4 +1,6 @@
 import deepsets
+import pandas as pd
+import numpy as np
 
 path = "DATA PATH HERE"
 data = pd.read_csv(path, header = None).to_numpy()

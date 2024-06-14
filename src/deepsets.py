@@ -17,9 +17,7 @@ import pytorch_lightning as pl
 from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
 from sklearn.model_selection import train_test_split
-import matplotlib.pyplot as plt
 import math
-import pickle
 
 class Phi(nn.Module):
     def __init__(self,input_dim: int, output_dim: int = 10):
