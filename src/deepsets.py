@@ -19,6 +19,8 @@ from torch.utils.data import DataLoader
 from sklearn.model_selection import train_test_split
 import math
 
+##Architecture
+
 class Phi(nn.Module):
     def __init__(self,input_dim: int, output_dim: int = 10):
         super().__init__()
@@ -106,6 +108,7 @@ class LitDeepSets(pl.LightningModule):
         optimizer = torch.optim.Adam(self.parameters(), self.lr)
         return optimizer
 
+###data handling
 
 def convert_vector_to_representation(vector, library, output_shape = None):
     '''
@@ -114,7 +117,7 @@ def convert_vector_to_representation(vector, library, output_shape = None):
     output_shape is the shape of the blend representation
     '''
     N_parents, = vector.shape
-    if N != library.shape[0]:
+    if N_parents != library.shape[0]:
         raise ValueError('library is of incorrect size')
 
     all_polymers = library * vector[:, np.newaxis]
@@ -136,8 +139,8 @@ def parse_data(library, data):
     as the last column
     """
     blends = data[:,:-1]
-    turbidities = data[:,-1:]
-    
+    turbidities = data[:,-1]
+
     N_parents, N_monomers = library.shape
     where = np.where(blends > 10**-6, 1, 0)
     _ = np.sum(where, axis = 1)
@@ -145,7 +148,7 @@ def parse_data(library, data):
     output_shape = (blend_capacity, N_monomers)
 
     reps = [
-        convert_vector_to_representation(blends, library, output_shape)
+        convert_vector_to_representation(blends[i], library, output_shape)
         for i in range(blends.shape[0])
     ]
 
@@ -162,3 +165,41 @@ class RHPs_Dataset(Dataset):
     def __getitem__(self, idx):
         return self.sets[idx], self.activity[idx]
 
+#####
+
+path = "pairwise_delta.csv"
+library_path = "3_1_24.csv"
+data = pd.read_csv(path, header = None).to_numpy()
+library = pd.read_csv(library_path, header=None)
+library = library.to_numpy()[:48, :]
+library = library / np.sum(library, axis = 1, keepdims = True)
+
+reps, delta = parse_data(library, data)
+delta = -1* delta
+
+X_train, X_val, y_train, y_val = train_test_split(
+        reps, delta, test_size=0.33, random_state=42
+    )
+
+train_dataset = RHPs_Dataset(X_train.astype(np.float32), y_train.astype(np.float32))
+train_dataloader = DataLoader(train_dataset, batch_size=64, shuffle=True)
+val_dataset = RHPs_Dataset(X_val.astype(np.float32), y_val.astype(np.float32))
+val_dataloader = DataLoader(val_dataset, batch_size=64, shuffle=False)
+
+N_monomers = 3
+embed_dim = 6
+lr = 10e-3
+
+phi = Phi(N_monomers,embed_dim)
+rho = Rho(embed_dim)
+
+deepsets = LitDeepSets(
+    phi,
+    rho,
+    lr = lr
+)
+
+max_epochs = 200
+
+trainer = pl.Trainer(max_epochs = max_epochs, log_every_n_steps = 4, check_val_every_n_epoch=10)
+trainer.fit(model=deepsets, train_dataloaders=train_dataloader, val_dataloaders = val_dataloader)
