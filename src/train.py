@@ -1,14 +1,16 @@
-import deepsets
+from deepsets import *
 import pandas as pd
 import numpy as np
 
-path = "DATA PATH HERE"
+path = "../data/pairwise_delta.csv"
+library_path = "../data/3_1_24.csv"
 data = pd.read_csv(path, header = None).to_numpy()
-library = pd.read_csv("LIBRARY PATH HERE", header=None)
+library = pd.read_csv(library_path, header=None)
 library = library.to_numpy()[:48, :]
 library = library / np.sum(library, axis = 1, keepdims = True)
 
 reps, delta = parse_data(library, data)
+delta = -1* delta
 
 X_train, X_val, y_train, y_val = train_test_split(
         reps, delta, test_size=0.33, random_state=42
