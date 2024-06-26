@@ -15,7 +15,7 @@ def generate_kmer_from_ID(distribution, ID):
     return np.prod(distribution**counts) * multinomial
 
 desired_kmers = ["00", "01", "02", "11", "12", "22"]
-def transform(M):
+def transform_2mers(M):
     '''
     takes M: matrix of parent polymers represented by monomer distributions
     returns k-mer transform applied to each row
