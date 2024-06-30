@@ -28,9 +28,9 @@ class Phi(nn.Module):
         self.output_dim = output_dim
 
         self.phi = nn.Sequential(
-            nn.Linear(input_dim, output_dim),
+            nn.Linear(input_dim, 32),
             nn.ReLU(),
-            nn.Linear(output_dim, output_dim),
+            nn.Linear(32, output_dim),
             nn.ReLU()
         )
 
@@ -52,9 +52,11 @@ class Rho(nn.Module):
         self.input_dim = input_dim
 
         self.rho = nn.Sequential(
-            nn.Linear(self.input_dim, self.input_dim),
+            nn.Linear(self.input_dim, 32),
             nn.ReLU(),
-            nn.Linear(self.input_dim, 1)
+            nn.Linear(32, 32),
+            nn.ReLU(),
+            nn.Linear(32, 1)
         )
 
     def forward(self, x):
