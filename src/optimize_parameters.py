@@ -32,7 +32,7 @@ val_dataloader = DataLoader(val_dataset, batch_size=64, shuffle=False)
 lr = 1e-3
 max_epochs = 200
 
-def objective(trial):
+def create_model(trial):
     phi_hidden_dim = trial.suggest_int('phi_hidden_dim', 32, 64)
     phi_layers = trial.suggest_int('phi_layers', 2, 4)
     embed_dim = trial.suggest_int('embed_dim', 3, 10)
@@ -48,8 +48,17 @@ def objective(trial):
         rho,
         lr = lr
     )
+    return deepsets
 
-    trainer = pl.Trainer(max_epochs = max_epochs, log_every_n_steps = 4, check_val_every_n_epoch=10)
+def objective(trial):
+    
+    deepsets = create_model(trial)
+    trainer = pl.Trainer(
+        max_epochs = max_epochs,
+        log_every_n_steps = 4,
+        check_val_every_n_epoch=10,
+        devices = 1 #some bug with using multiple devices
+    )
     trainer.fit(model=deepsets, train_dataloaders=train_dataloader, val_dataloaders = val_dataloader)
 
     pred = deepsets(torch.from_numpy(X_val.astype(np.float32)))
@@ -59,5 +68,7 @@ def objective(trial):
     return MSE
 
 
-study = optuna.create_study(direction='minimize')
-study.optimize(objective, n_trials=3)
+study = optuna.create_study(
+    direction='minimize',
+)
+study.optimize(objective, n_trials=10)
