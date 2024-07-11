@@ -14,8 +14,8 @@ data = pd.read_csv(path, header = None).to_numpy()
 
 
 
-train_index = data[:, 32] != 0
-val_index = data[:, 32] == 0 
+# train_index = data[:, 32] != 0
+# val_index = data[:, 32] == 0 
 #train_index = train_index & (data[:, 30] != 0)
 #val_index = val_index & (data[:, 30] == 0)
 
@@ -23,19 +23,18 @@ val_index = data[:, 32] == 0
 library = pd.read_csv(library_path, header=None)
 library = library.to_numpy()[:48, :]
 library = library / np.sum(library, axis = 1, keepdims = True)
-library_2mers = transform_2mers(library)
 
 reps, delta = parse_data(library, data)
 delta = -1* delta #fix sign error in pairwise dataset
 
-#X_train, X_val, y_train, y_val = train_test_split(
-#        reps, delta, test_size=0.33, random_state=42
-#    )
+X_train, X_val, y_train, y_val = train_test_split(
+       reps, delta, test_size=0.33, random_state=42
+   )
 
-X_train = reps[train_index]
-y_train = delta[train_index]
-X_val = reps[val_index]
-y_val = delta[val_index]
+# X_train = reps[train_index]
+# y_train = delta[train_index]
+# X_val = reps[val_index]
+# y_val = delta[val_index]
 
 
 
@@ -90,7 +89,7 @@ plt.ylim(-0.15, 0.15)
 
 plt.show()
 # Save the plot after displaying it
-plt.savefig('actual_vs_predicted.png')
+plt.savefig('actual_vs_predicted2.png')
 
 from sklearn.metrics import r2_score
 print(f'**r^2 = {r2_score(y_val, pred)}**')
