@@ -57,7 +57,7 @@ def objective(trial):
         max_epochs = max_epochs,
         log_every_n_steps = 4,
         check_val_every_n_epoch=10,
-        devices = 1 #some bug with using multiple devices
+        #devices = 1 #some bug with using multiple devices
     )
     trainer.fit(model=deepsets, train_dataloaders=train_dataloader, val_dataloaders = val_dataloader)
 
@@ -67,8 +67,9 @@ def objective(trial):
     MSE = np.average((y_val - pred)**2)
     return MSE
 
-
+sampler = optuna.samplers.TPESampler(seed=10)
 study = optuna.create_study(
     direction='minimize',
+    sampler=sampler
 )
 study.optimize(objective, n_trials=10)
