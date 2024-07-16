@@ -4,40 +4,16 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import optuna
-
-# fix the random seed
-pl.seed_everything(0)
-
-data_path = "../data/pairwise_delta.csv"
-data = pd.read_csv(data_path, header = None).to_numpy()
-
-library_path = "../data/3_1_24.csv"
-library = pd.read_csv(library_path, header=None)
-library = library.to_numpy()[:48, :]
-library = library / np.sum(library, axis = 1, keepdims = True)
-
-reps, delta = parse_data(library, data)
-delta = -1* delta #fix sign error in pairwise dataset
-_, blend_capacity, rep_dim = reps.shape
-
-X_train, X_val, y_train, y_val = train_test_split(
-       reps, delta, test_size=0.33, random_state=42
-   )
-train_dataset = RHPs_Dataset(X_train.astype(np.float32), y_train.astype(np.float32))
-train_dataloader = DataLoader(train_dataset, batch_size=64, shuffle=True)
-val_dataset = RHPs_Dataset(X_val.astype(np.float32), y_val.astype(np.float32))
-val_dataloader = DataLoader(val_dataset, batch_size=64, shuffle=False)
+from optuna.trial import TrialState
 
 
-lr = 1e-3
-max_epochs = 200
 
 def create_model(trial):
-    phi_hidden_dim = trial.suggest_int('phi_hidden_dim', 32, 64)
+    phi_hidden_dim = trial.suggest_int('phi_hidden_dim', 16, 32)
     phi_layers = trial.suggest_int('phi_layers', 2, 4)
     embed_dim = trial.suggest_int('embed_dim', 3, 10)
 
-    rho_hidden_dim = trial.suggest_int('rho_hidden_dim', 32, 64)
+    rho_hidden_dim = trial.suggest_int('rho_hidden_dim', 16, 32)
     rho_layers = trial.suggest_int('rho_layers', 2, 4)
     
     phi = Phi(input_dim=rep_dim, hidden_dim=phi_hidden_dim, output_dim=embed_dim, n_layers=phi_layers)
@@ -67,9 +43,55 @@ def objective(trial):
     MSE = np.average((y_val - pred)**2)
     return MSE
 
-sampler = optuna.samplers.TPESampler(seed=10)
-study = optuna.create_study(
-    direction='minimize',
-    sampler=sampler
-)
-study.optimize(objective, n_trials=10)
+
+if __name__ == "__main__":
+    # fix the random seed
+    pl.seed_everything(0)
+
+    data_path = "../data/pairwise_delta.csv"
+    data = pd.read_csv(data_path, header = None).to_numpy()
+
+    library_path = "../data/3_1_24.csv"
+    library = pd.read_csv(library_path, header=None)
+    library = library.to_numpy()[:48, :]
+    library = library / np.sum(library, axis = 1, keepdims = True)
+
+    reps, delta = parse_data(library, data)
+    delta = -1* delta #fix sign error in pairwise dataset
+    _, blend_capacity, rep_dim = reps.shape
+
+    X_train, X_val, y_train, y_val = train_test_split(
+        reps, delta, test_size=0.33, random_state=42
+    )
+    train_dataset = RHPs_Dataset(X_train.astype(np.float32), y_train.astype(np.float32))
+    train_dataloader = DataLoader(train_dataset, batch_size=64, shuffle=True)
+    val_dataset = RHPs_Dataset(X_val.astype(np.float32), y_val.astype(np.float32))
+    val_dataloader = DataLoader(val_dataset, batch_size=64, shuffle=False)
+
+
+    lr = 1e-3
+    max_epochs = 200
+
+    sampler = optuna.samplers.TPESampler(seed=10)
+    study = optuna.create_study(
+        direction='minimize',
+        sampler=sampler
+    )
+    study.optimize(objective, n_trials=100, timeout=600)
+
+    pruned_trials = study.get_trials(deepcopy=False, states=[TrialState.PRUNED])
+    complete_trials = study.get_trials(deepcopy=False, states=[TrialState.COMPLETE])
+
+    print("Study statistics: ")
+    print("  Number of finished trials: ", len(study.trials))
+    print("  Number of pruned trials: ", len(pruned_trials))
+    print("  Number of complete trials: ", len(complete_trials))
+
+    print("Best trial:")
+    trial = study.best_trial
+
+    print("  Value: ", trial.value)
+
+    print("  Params: ")
+    for key, value in trial.params.items():
+        print("    {}: {}".format(key, value))
