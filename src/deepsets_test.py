@@ -19,7 +19,7 @@ from torch.utils.data import DataLoader
 from sklearn.model_selection import train_test_split
 import math
 
-##Architecture
+#region Architecture
 
 class Phi(nn.Module):
     def __init__(self,
@@ -98,6 +98,9 @@ class LitDeepSets(pl.LightningModule):
         self.val_loss = []
         self.lr = lr
 
+    def set_lr(self, lr):
+        self.lr = lr
+
     def forward(self, x):
         x_r = self.pool(self.phi(x))
         y_hat = self.rho(x_r)
@@ -126,8 +129,8 @@ class LitDeepSets(pl.LightningModule):
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), self.lr)
         return optimizer
-
-###data handling
+#endregion
+#region Data Handling
 
 def convert_vector_to_representation(vector, library, output_shape = None):
     '''
@@ -183,3 +186,4 @@ class RHPs_Dataset(Dataset):
 
     def __getitem__(self, idx):
         return self.sets[idx], self.activity[idx]
+#endregion
