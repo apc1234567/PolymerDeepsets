@@ -1,11 +1,13 @@
 from deepsets_test import *
 from kmer_transform import transform_2mers
+from make_split import train_on_parents, train_on_random_parents
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
 # fix the random seed
 pl.seed_everything(0)
+np.random.seed(0)
 
 #region load data
 path = "../data/pairwise_delta.csv"
@@ -17,26 +19,22 @@ library = library.to_numpy()[:48, :]
 library = library / np.sum(library, axis = 1, keepdims = True)
 
 reps, delta = parse_data(library, data)
-delta = -1* delta #fix sign error in pairwise dataset
 #endregion
+
+
 #region make split
 
+#random split
 # X_train, X_val, y_train, y_val = train_test_split(
 #        reps, delta, test_size=0.33, random_state=42
 #    )
 
+#randomly choose 16 parents
+X_train, X_val, y_train, y_val = train_on_random_parents(library, data, n_parents=16)
 
-# remove x_45 != 0 and x_39 !=0  as the validation set
-train_index = data[:, 32] != 0
-val_index = data[:, 32] == 0 
-train_index = train_index & (data[:, 30] != 0)
-val_index = val_index & (data[:, 30] == 0)
-
-X_train = reps[train_index]
-y_train = delta[train_index]
-X_val = reps[val_index]
-y_val = delta[val_index]
 #endregion
+
+
 #region make model
 train_dataset = RHPs_Dataset(X_train.astype(np.float32), y_train.astype(np.float32))
 train_dataloader = DataLoader(train_dataset, batch_size=64, shuffle=True)
