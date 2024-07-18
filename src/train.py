@@ -1,4 +1,4 @@
-from deepsets_test import *
+from deepsets import *
 from kmer_transform import transform_2mers
 from make_split import train_on_parents, train_on_random_parents
 import pandas as pd
@@ -21,19 +21,17 @@ library = library / np.sum(library, axis = 1, keepdims = True)
 reps, delta = parse_data(library, data)
 #endregion
 
-
 #region make split
 
 #random split
-# X_train, X_val, y_train, y_val = train_test_split(
-#        reps, delta, test_size=0.33, random_state=42
-#    )
+X_train, X_val, y_train, y_val = train_test_split(
+       reps, delta, test_size=0.33, random_state=42
+   )
 
 #randomly choose 16 parents
-X_train, X_val, y_train, y_val = train_on_random_parents(library, data, n_parents=16)
+#X_train, X_val, y_train, y_val = train_on_random_parents(library, data, n_parents=16)
 
 #endregion
-
 
 #region make model
 train_dataset = RHPs_Dataset(X_train.astype(np.float32), y_train.astype(np.float32))
@@ -57,12 +55,19 @@ deepsets = LitDeepSets(
     rho,
 )
 #endregion
+
 #region train model
 max_epochs = 1000
 lr = 1e-2
 deepsets.set_lr(lr)
 
-trainer = pl.Trainer(max_epochs = max_epochs, log_every_n_steps = 4, check_val_every_n_epoch=10)
+from datetime import datetime
+now = str(datetime.now())
+check_path = "logs/" + now + "/"
+trainer = pl.Trainer(max_epochs = max_epochs,
+                     log_every_n_steps = 4,
+                     check_val_every_n_epoch=10,
+                     default_root_dir = check_path)
 trainer.fit(model=deepsets, train_dataloaders=train_dataloader, val_dataloaders = val_dataloader)
 
 

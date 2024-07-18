@@ -1,4 +1,4 @@
-from deepsets_test import *
+from deepsets import *
 from kmer_transform import transform_2mers
 import pandas as pd
 import numpy as np
@@ -33,7 +33,6 @@ def objective(trial):
         max_epochs = max_epochs,
         log_every_n_steps = 4,
         check_val_every_n_epoch=10,
-        #devices = 1 #some bug with using multiple devices
     )
     trainer.fit(model=deepsets, train_dataloaders=train_dataloader, val_dataloaders = val_dataloader)
 

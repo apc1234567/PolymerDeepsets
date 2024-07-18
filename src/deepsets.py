@@ -19,20 +19,30 @@ from torch.utils.data import DataLoader
 from sklearn.model_selection import train_test_split
 import math
 
-##Architecture
+#region Architecture
 
 class Phi(nn.Module):
-    def __init__(self,input_dim: int, output_dim: int = 10):
+    def __init__(self,
+                 input_dim: int,
+                 hidden_dim: int = 32,
+                 output_dim: int = 10,
+                 n_layers: int = 2):
         super().__init__()
         self.input_dim = input_dim
+        self.hidden_dim = hidden_dim
         self.output_dim = output_dim
+        self.n_layers = n_layers
 
-        self.phi = nn.Sequential(
-            nn.Linear(input_dim, 32),
-            nn.ReLU(),
-            nn.Linear(32, output_dim),
-            nn.ReLU()
-        )
+        layers = [nn.Linear(input_dim, hidden_dim),
+            nn.ReLU()]
+        for i in range(n_layers - 2):
+            layers.append(nn.Linear(hidden_dim, hidden_dim))
+            layers.append(nn.ReLU())
+        layers.append(nn.Linear(hidden_dim, output_dim))
+        layers.append(nn.ReLU())
+
+        self.phi = nn.Sequential(*layers)
+
 
     def forward(self, P):
         '''
@@ -47,17 +57,24 @@ class Phi(nn.Module):
         return P_r * c
 
 class Rho(nn.Module):
-    def __init__(self, input_dim: int):
+
+    def __init__(self,
+                 input_dim: int,
+                 hidden_dim: int = 32,
+                 n_layers: int = 3):
         super().__init__()
         self.input_dim = input_dim
+        self.hidden_dim = hidden_dim
+        self.n_layers = n_layers
 
-        self.rho = nn.Sequential(
-            nn.Linear(self.input_dim, 32),
-            nn.ReLU(),
-            nn.Linear(32, 32),
-            nn.ReLU(),
-            nn.Linear(32, 1)
-        )
+        layers = [nn.Linear(input_dim, hidden_dim),
+            nn.ReLU()]
+        for i in range(n_layers - 2):
+            layers.append(nn.Linear(hidden_dim, hidden_dim))
+            layers.append(nn.ReLU())
+        layers.append(nn.Linear(hidden_dim, 1)) #scalar output
+
+        self.rho = nn.Sequential(*layers)
 
     def forward(self, x):
         x = self.rho(x)
@@ -79,6 +96,9 @@ class LitDeepSets(pl.LightningModule):
         self.pool = pool if pool else lambda x: x.sum(dim = -2) #default is summation
         self.train_loss = []
         self.val_loss = []
+        self.lr = lr
+
+    def set_lr(self, lr):
         self.lr = lr
 
     def forward(self, x):
@@ -109,8 +129,9 @@ class LitDeepSets(pl.LightningModule):
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), self.lr)
         return optimizer
+#endregion
 
-###data handling
+#region Data Handling
 
 def convert_vector_to_representation(vector, library, output_shape = None):
     '''
@@ -166,3 +187,4 @@ class RHPs_Dataset(Dataset):
 
     def __getitem__(self, idx):
         return self.sets[idx], self.activity[idx]
+#endregion
