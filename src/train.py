@@ -1,5 +1,5 @@
-from deepsets import *
-from kmer_transform import transform_2mers
+from deepsets_kmer import *
+from kmer_transform import augment_library
 from make_split import train_on_parents, train_on_random_parents
 import pandas as pd
 import numpy as np
@@ -12,13 +12,13 @@ np.random.seed(0)
 #region load data
 path = "../data/pairwise_delta.csv"
 library_path = "../data/3_1_24.csv"
-data = pd.read_csv(path, header = None).to_numpy()
 
+data = pd.read_csv(path, header = None).to_numpy()
 library = pd.read_csv(library_path, header=None)
 library = library.to_numpy()[:48, :]
 library = library / np.sum(library, axis = 1, keepdims = True)
+reps, delta = parse_data(augment_library(library, k = 2), data) #specify kmer here
 
-reps, delta = parse_data(library, data)
 #endregion
 
 #region make split
@@ -57,7 +57,7 @@ deepsets = LitDeepSets(
 #endregion
 
 #region train model
-max_epochs = 1000
+max_epochs = 500
 lr = 1e-2
 deepsets.set_lr(lr)
 
@@ -74,33 +74,24 @@ trainer.fit(model=deepsets, train_dataloaders=train_dataloader, val_dataloaders 
 pred = deepsets(torch.from_numpy(X_val.astype(np.float32)))
 pred = np.squeeze(pred.detach().numpy())
 
-plt.scatter(y_val, pred)
-plt.xlabel("Actual")
-plt.ylabel("Predicted")
-plt.show()
-# save the plot
-plt.savefig('actual_vs_predicted.png')
-
 # Determine the range for the diagonal line
 min_val = min(min(y_val), min(pred))
 max_val = max(max(y_val), max(pred))
 
 plt.figure(figsize=(6,6))  # Make the figure square
 plt.scatter(y_val, pred)
-plt.plot([-0.15, 0.15], [-0.15, 0.15], 'r')  # Diagonal line
+plt.plot([min_val, max_val], [min_val, max_val], 'r')  # Diagonal line
 plt.xlabel("Actual")
 plt.ylabel("Predicted")
 plt.axis('equal')  # Set the same scale for both axes
 
-# Optionally, set the limits explicitly if you want to ensure they are exactly the same
-plt.xlim(-0.15, 0.15)
-plt.ylim(-0.15, 0.15)
-
 plt.show()
-# Save the plot after displaying it
-plt.savefig('actual_vs_predicted2.png')
+try:
+    plt.savefig(check_path + 'actual_vs_predicted.png')
+    from sklearn.metrics import r2_score
+    print(f'**r^2 = {r2_score(y_val, pred)}**')
+    print(f'**MSE = {np.average((y_val - pred)**2)}')
+except:
+    pass
 
-from sklearn.metrics import r2_score
-print(f'**r^2 = {r2_score(y_val, pred)}**')
-print(f'**MSE = {np.average((y_val - pred)**2)}')
 #endregion

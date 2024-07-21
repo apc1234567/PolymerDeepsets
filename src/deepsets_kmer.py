@@ -28,12 +28,12 @@ class Phi(nn.Module):
                  output_dim: int = 10,
                  n_layers: int = 2):
         super().__init__()
-        self.input_dim = input_dim
+        self.input_dim = input_dim - 1 #remove blending coefficients
         self.hidden_dim = hidden_dim
         self.output_dim = output_dim
         self.n_layers = n_layers
 
-        layers = [nn.Linear(input_dim, hidden_dim),
+        layers = [nn.Linear(input_dim - 1, hidden_dim),
             nn.ReLU()]
         for i in range(n_layers - 2):
             layers.append(nn.Linear(hidden_dim, hidden_dim))
@@ -46,15 +46,17 @@ class Phi(nn.Module):
 
     def forward(self, P):
         '''
-        takes in B x N x M tensor, where B is the batch dimension, N is the number of polymers in the blend, and
+        takes in B x N x (M + 1) tensor, where B is the batch dimension, 
+        N is the number of polymers in the blend, and
         M is the number of monomers
+        
         Outputs B x N x self.output_dim tensor
         '''
-        c = P.sum(dim = -1, keepdim = True) #blending coefficients
-        P_ = P / c
-        P_[P_ != P_] = 0 #check for divide by zero error
+        c = P[:, :, 0:1]
+        P_ = P[:, :, 1:]
         P_r = self.phi(P_)
         return P_r * c
+
 
 class Rho(nn.Module):
 
@@ -143,7 +145,9 @@ def convert_vector_to_representation(vector, library, output_shape = None):
     if N_parents != library.shape[0]:
         raise ValueError('library is of incorrect size')
 
-    all_polymers = library * vector[:, np.newaxis]
+    filter = np.where(vector[:, np.newaxis] > 1e-6, 1, 0)
+    all_polymers = library * filter
+    all_polymers = np.concatenate((vector[:, np.newaxis], all_polymers), axis = 1)
     rep = all_polymers[~np.all(all_polymers == 0, axis=1)]
 
     if output_shape:
@@ -168,7 +172,7 @@ def parse_data(library, data):
     where = np.where(blends > 10**-6, 1, 0)
     _ = np.sum(where, axis = 1)
     blend_capacity = np.max(_)
-    output_shape = (blend_capacity, N_monomers)
+    output_shape = (blend_capacity, N_monomers + 1) #increase output dimension by 1 to fit blend coefficients
 
     reps = [
         convert_vector_to_representation(blends[i], library, output_shape)

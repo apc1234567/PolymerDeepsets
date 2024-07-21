@@ -1,4 +1,5 @@
 import numpy as np
+from sklearn.preprocessing import PolynomialFeatures
 import math
 
 def generate_kmer_from_ID(distribution, ID):
@@ -14,7 +15,7 @@ def generate_kmer_from_ID(distribution, ID):
         multinomial *= 1 / math.factorial(num)
     return np.prod(distribution**counts) * multinomial
 
-desired_kmers = ["00", "01", "02", "11", "12", "22"]
+desired_kmers = ["0", "1", "2", "00", "01", "02", "11", "12", "22"]
 def transform_2mers(M):
     '''
     takes M: matrix of parent polymers represented by monomer distributions
@@ -26,3 +27,14 @@ def transform_2mers(M):
         for j in range(n):
             K[j, i] = generate_kmer_from_ID(M[j], ID)
     return K
+
+def augment_library(library, k:int = 2):
+    '''
+    returns library augmented with kmer features up to specified k
+    '''
+    poly = PolynomialFeatures(k, include_bias=False)
+    return poly.fit_transform(library)
+
+
+
+

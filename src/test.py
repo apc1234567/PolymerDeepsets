@@ -1,7 +1,8 @@
-from deepsets import *
+from deepsets_kmer import *
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+from kmer_transform import augment_library
 
 
 #region load data
@@ -12,7 +13,7 @@ data = pd.read_csv(path, header = None).to_numpy()
 library = pd.read_csv(library_path, header=None)
 library = library.to_numpy()[:48, :]
 library = library / np.sum(library, axis = 1, keepdims = True)
-reps, delta = parse_data(library, data)
+reps, delta = parse_data(augment_library(library, k = 2), data) #specify kmer here
 #endregion
 
 #region load model
@@ -26,7 +27,7 @@ phi = Phi(input_dim=rep_dim,
 rho = Rho(input_dim=embed_dim,
           hidden_dim=28,
           n_layers=3)
-check_path = "logs/2024-07-18 16:44:40.696349/lightning_logs/version_0/checkpoints/epoch=999-step=12000.ckpt"
+check_path = "logs/2024-07-20 21:12:38.208586/lightning_logs/version_0/checkpoints/epoch=499-step=6000.ckpt"
 deepsets = LitDeepSets.load_from_checkpoint(check_path, phi = phi, rho = rho)
 deepsets = deepsets.to('cpu')
 #endregion
@@ -47,7 +48,7 @@ plt.ylabel("Predicted")
 plt.axis('equal')  # Set the same scale for both axes
 
 plt.show()
-plt.savefig(f'val_20240528.png')
+plt.savefig(check_path + 'val_20240508_2mer.png')
 
 from sklearn.metrics import r2_score
 print(f'**r^2 = {r2_score(delta, pred)}**')
