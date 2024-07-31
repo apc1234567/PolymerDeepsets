@@ -1,4 +1,4 @@
-from deepsets import RHPs_Dataset, DataLoader, parse_data
+from deepsets_kmer import RHPs_Dataset, DataLoader, parse_data
 import numpy as np
 import pandas as pd
 

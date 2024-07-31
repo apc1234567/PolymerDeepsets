@@ -26,12 +26,14 @@ class Phi(nn.Module):
                  input_dim: int,
                  hidden_dim: int = 32,
                  output_dim: int = 10,
-                 n_layers: int = 2):
+                 n_layers: int = 2,
+                 transform = None):
         super().__init__()
         self.input_dim = input_dim - 1 #remove blending coefficients
         self.hidden_dim = hidden_dim
         self.output_dim = output_dim
         self.n_layers = n_layers
+        self.transform = transform
 
         layers = [nn.Linear(input_dim - 1, hidden_dim),
             nn.ReLU()]
@@ -49,11 +51,13 @@ class Phi(nn.Module):
         takes in B x N x (M + 1) tensor, where B is the batch dimension, 
         N is the number of polymers in the blend, and
         M is the number of monomers
-        
+
         Outputs B x N x self.output_dim tensor
         '''
         c = P[:, :, 0:1]
         P_ = P[:, :, 1:]
+        if self.transform:
+            P_ = self.transform(P_)
         P_r = self.phi(P_)
         return P_r * c
 

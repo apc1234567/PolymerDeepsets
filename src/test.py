@@ -6,14 +6,16 @@ from kmer_transform import augment_library
 
 
 #region load data
-path = "../data/20240528_delta.csv"
+path = "../data/20240508_delta.csv"
 library_path = "../data/3_1_24.csv"
+k = 2 #specify kmer here
 
 data = pd.read_csv(path, header = None).to_numpy()
 library = pd.read_csv(library_path, header=None)
 library = library.to_numpy()[:48, :]
 library = library / np.sum(library, axis = 1, keepdims = True)
-reps, delta = parse_data(augment_library(library, k = 2), data) #specify kmer here
+library = augment_library(library, k = k)
+reps, delta = parse_data(library, data)
 #endregion
 
 #region load model
@@ -27,7 +29,9 @@ phi = Phi(input_dim=rep_dim,
 rho = Rho(input_dim=embed_dim,
           hidden_dim=28,
           n_layers=3)
-check_path = "logs/2024-07-20 21:12:38.208586/lightning_logs/version_0/checkpoints/epoch=499-step=6000.ckpt"
+###
+check_path = "logs/2024-07-31 00:52:46.3562882merfull/lightning_logs/version_0/checkpoints/epoch=999-step=12000.ckpt"
+###
 deepsets = LitDeepSets.load_from_checkpoint(check_path, phi = phi, rho = rho)
 deepsets = deepsets.to('cpu')
 #endregion
@@ -36,22 +40,29 @@ deepsets = deepsets.to('cpu')
 pred = deepsets(torch.from_numpy(reps.astype(np.float32)))
 pred = np.squeeze(pred.detach().numpy())
 
+
 # Determine the range for the diagonal line
-min_val = min(min(delta), min(pred))
-max_val = max(max(delta), max(pred))
+spread = np.quantile(delta,0.95) - np.quantile(delta,0.05)
+min_val = np.quantile(delta,0.05) - 0.1*spread
+max_val = np.quantile(delta,0.95) + 0.2*spread
 
 plt.figure(figsize=(6,6))  # Make the figure square
 plt.scatter(delta, pred)
 plt.plot([min_val, max_val], [min_val, max_val], 'r')  # Diagonal line
 plt.xlabel("Actual")
 plt.ylabel("Predicted")
-plt.axis('equal')  # Set the same scale for both axes
+ax = plt.gca()
+ax.set_xlim([min_val, max_val])
+ax.set_ylim([min_val, max_val])
 
 plt.show()
-plt.savefig(check_path + 'val_20240508_2mer.png')
-
-from sklearn.metrics import r2_score
-print(f'**r^2 = {r2_score(delta, pred)}**')
-print(f'**MSE = {np.average((delta - pred)**2)}')
+try:
+    plt.savefig('actual_vs_predicted.png')
+    plt.savefig(check_path + 'actual_vs_predicted.png')
+    from sklearn.metrics import r2_score
+    print(f'**r^2 = {r2_score(delta, pred)}**')
+    print(f'**MSE = {np.average((delta - pred)**2)}')
+except:
+    pass
 
 #endregion
